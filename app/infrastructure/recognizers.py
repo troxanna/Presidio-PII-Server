@@ -14,6 +14,24 @@ def build_ru_critical_recognizers() -> List[PatternRecognizer]:
         supported_language="ru",
     ))
 
+    # Russian full name (ФИО)
+    recs.append(PatternRecognizer(
+        supported_entity=E.PERSON,
+        patterns=[
+            Pattern("ru_fio_three", r"\b[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\b", 0.85),
+            Pattern("ru_fio_two", r"\b[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+\b", 0.7),
+        ],
+        context=[
+            "гражданин",
+            "клиент",
+            "сотрудник",
+            "ФИО",
+            "фио",
+        ],
+        supported_language="ru",
+        global_regex_flags=0,
+    ))
+
     # SNILS
     recs.append(PatternRecognizer(
         supported_entity=E.RU_SNILS,
