@@ -32,7 +32,9 @@ def health() -> Dict[str, str]:
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze_endpoint(req: AnalyzeRequest):
     language = req.language or detect_language(req.text)
-    raw = analyzer.analyze(text=req.text, language=language)
+    print(f"Analyze called with language: {language}")
+    # Отключаем фильтрацию по языку для проверки
+    raw = analyzer.analyze(text=req.text)
     results = post_validate(req.text, raw)
     items = [{
         "entity_type": r.entity_type,
@@ -46,6 +48,7 @@ def analyze_endpoint(req: AnalyzeRequest):
 @app.post("/anonymize", response_model=AnonymizeResponse)
 def anonymize_endpoint(req: AnonymizeRequest):
     language = req.language or detect_language(req.text)
+    print(f"Anonymize called with language: {language}")
     raw = analyzer.analyze(text=req.text, language=language)
     results = post_validate(req.text, raw)
     policy = {**get_default_policy(), **(req.policy or {})}

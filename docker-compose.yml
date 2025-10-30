@@ -6,7 +6,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - FASTTEXT_MODEL=
+      - FASTTEXT_MODEL=/models/lid.176.bin
     volumes:
       - ./models:/models:ro   # put lid.176.bin here and set FASTTEXT_MODEL=/models/lid.176.bin
     healthcheck:
