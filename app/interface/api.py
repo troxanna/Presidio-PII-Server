@@ -33,8 +33,7 @@ def health() -> Dict[str, str]:
 def analyze_endpoint(req: AnalyzeRequest):
     language = req.language or detect_language(req.text)
     print(f"Analyze called with language: {language}")
-    # Отключаем фильтрацию по языку для проверки
-    raw = analyzer.analyze(text=req.text)
+    raw = analyzer.analyze(text=req.text, language=language)
     results = post_validate(req.text, raw)
     items = [{
         "entity_type": r.entity_type,
