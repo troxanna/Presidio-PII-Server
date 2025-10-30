@@ -1,7 +1,69 @@
 # Recognizers placeholder
 from typing import List
+
 from presidio_analyzer import Pattern, PatternRecognizer
+
 from app.domain import entities as E
+
+_SURNAME_SUFFIXES = (
+    "ов",
+    "ова",
+    "ев",
+    "ева",
+    "ёв",
+    "ёва",
+    "ин",
+    "ина",
+    "ын",
+    "ына",
+    "ский",
+    "ская",
+    "цкий",
+    "цкая",
+    "ской",
+    "цкой",
+    "кий",
+    "кая",
+    "ко",
+    "енко",
+    "ук",
+    "юк",
+    "чук",
+    "щук",
+    "нюк",
+    "ян",
+    "иан",
+    "янц",
+    "дзе",
+    "швили",
+    "ашвили",
+)
+
+_PATRONYMIC_SUFFIXES = (
+    "ович",
+    "евич",
+    "вич",
+    "овна",
+    "евна",
+    "ична",
+    "вна",
+    "оглы",
+    "кызы",
+    "улы",
+    "гулы",
+    "уулу",
+    "кизи",
+    "ич",
+)
+
+_SURNAME_SUFFIX_REGEX = "(?:" + "|".join(_SURNAME_SUFFIXES) + ")"
+_PATRONYMIC_SUFFIX_REGEX = "(?:" + "|".join(_PATRONYMIC_SUFFIXES) + ")"
+_SURNAME_PATTERN = rf"[А-ЯЁ][а-яё]+?(?:-[А-ЯЁ][а-яё]+?)*{_SURNAME_SUFFIX_REGEX}"
+_PATRONYMIC_PATTERN = rf"[А-ЯЁ][а-яё]+?{_PATRONYMIC_SUFFIX_REGEX}"
+_RU_FIO_THREE = rf"\b{_SURNAME_PATTERN}\s+[А-ЯЁ][а-яё]+\s+{_PATRONYMIC_PATTERN}\b"
+_RU_FIO_TWO = rf"\b{_SURNAME_PATTERN}\s+[А-ЯЁ][а-яё]+\b"
+_RU_FIO_REVERSED = rf"\b[А-ЯЁ][а-яё]+\s+{_SURNAME_PATTERN}\b"
+
 
 def build_ru_critical_recognizers() -> List[PatternRecognizer]:
     recs: List[PatternRecognizer] = []
@@ -12,6 +74,25 @@ def build_ru_critical_recognizers() -> List[PatternRecognizer]:
         patterns=[Pattern("russian_passport", r"\b\d{2}\s?\d{2}\s?\d{6}\b", 0.3)],
         context=["паспорт", "серия", "номер"],
         supported_language="ru",
+    ))
+
+    # Russian full name (ФИО)
+    recs.append(PatternRecognizer(
+        supported_entity=E.PERSON,
+        patterns=[
+            Pattern("ru_fio_three", _RU_FIO_THREE, 0.9),
+            Pattern("ru_fio_two", _RU_FIO_TWO, 0.75),
+            Pattern("ru_fio_reversed", _RU_FIO_REVERSED, 0.6),
+        ],
+        context=[
+            "гражданин",
+            "клиент",
+            "сотрудник",
+            "ФИО",
+            "фио",
+        ],
+        supported_language="ru",
+        global_regex_flags=0,
     ))
 
     # SNILS
