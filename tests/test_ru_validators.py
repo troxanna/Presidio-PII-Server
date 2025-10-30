@@ -21,3 +21,23 @@ def test_analyze_and_anonymize(client):
     # ensure critical numbers are masked/replaced
     assert "500100732259" not in text
     assert re.search(r"\d{2}\s?\d{2}\s?\d{6}", text) is None
+
+
+def test_person_recognizer_detects_names(client):
+    resp = client.post(
+        "/analyze",
+        json={"text": "Неводчикова Анастасия Анреевна", "language": "ru"},
+    )
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert any(item["entity_type"] == "PERSON" for item in items)
+
+
+def test_person_recognizer_rejects_nouns(client):
+    resp = client.post(
+        "/analyze",
+        json={"text": "Коробка Стол Стул", "language": "ru"},
+    )
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert all(item["entity_type"] != "PERSON" for item in items)
