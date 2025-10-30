@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from app.application.service import analyzer, anonymizer, post_validate
 from app.application.lang_detect import detect_language
-from app.infrastructure.policies import get_default_policy
+from app.infrastructure.policies import get_default_policy, to_operator_config
 
 app = FastAPI(title="Presidio RU+EN PII Server", version="1.3.0")
 
@@ -51,7 +51,8 @@ def anonymize_endpoint(req: AnonymizeRequest):
     raw = analyzer.analyze(text=req.text, language=language)
     results = post_validate(req.text, raw)
     policy = {**get_default_policy(), **(req.policy or {})}
-    out = anonymizer.anonymize(text=req.text, analyzer_results=results, anonymizers_config=policy)
+    operators = to_operator_config(policy)
+    out = anonymizer.anonymize(text=req.text, analyzer_results=results, operators=operators)
     items = [{
         "entity_type": r.entity_type,
         "start": r.start,
