@@ -6,7 +6,11 @@ from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, RecognizerResu
 from presidio_anonymizer import AnonymizerEngine
 
 from app.infrastructure.nlp import create_nlp_engine, nlp_status
-from app.infrastructure.recognizers import build_ru_critical_recognizers, build_ru_bank_recognizers
+from app.infrastructure.recognizers import (
+    build_generic_recognizers,
+    build_ru_bank_recognizers,
+    build_ru_critical_recognizers,
+)
 from app.domain.validators import (
     luhn_ok,
     snils_checksum_ok,
@@ -40,7 +44,11 @@ def _ensure_registry():
         logger.info("Initializing recognizer registry")
         _registry = RecognizerRegistry()
         _registry.load_predefined_recognizers(nlp_engine=_ensure_nlp_engine())
-        for recognizer in build_ru_critical_recognizers() + build_ru_bank_recognizers():
+        for recognizer in (
+            build_generic_recognizers()
+            + build_ru_critical_recognizers()
+            + build_ru_bank_recognizers()
+        ):
             _registry.add_recognizer(recognizer)
     return _registry
 
