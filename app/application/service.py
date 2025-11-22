@@ -1,27 +1,78 @@
 # Service placeholder
+import logging
 from typing import List
+
 from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, RecognizerResult
 from presidio_anonymizer import AnonymizerEngine
 
-from app.infrastructure.nlp import create_nlp_engine
+from app.infrastructure.nlp import create_nlp_engine, nlp_status
 from app.infrastructure.recognizers import build_ru_critical_recognizers, build_ru_bank_recognizers
 from app.domain.validators import (
-    luhn_ok, snils_checksum_ok, inn_checksum_ok, ogrn_checksum_ok,
-    bik_ok, account_checksum_ok, find_all_biks,
+    luhn_ok,
+    snils_checksum_ok,
+    inn_checksum_ok,
+    ogrn_checksum_ok,
+    bik_ok,
+    account_checksum_ok,
+    find_all_biks,
 )
 from app.domain import entities as E
 
-# Build engines & registry as singletons
-_nlp_engine = create_nlp_engine()
-_registry = RecognizerRegistry()
-_registry.load_predefined_recognizers(nlp_engine=_nlp_engine)
+logger = logging.getLogger(__name__)
 
-# Add custom recognizers
-for r in build_ru_critical_recognizers() + build_ru_bank_recognizers():
-    _registry.add_recognizer(r)
+_nlp_engine = None
+_registry = None
+_analyzer = None
+_anonymizer = None
 
-analyzer = AnalyzerEngine(nlp_engine=_nlp_engine, registry=_registry, supported_languages=["ru", "en"])
-anonymizer = AnonymizerEngine()
+
+def _ensure_nlp_engine():
+    global _nlp_engine
+    if _nlp_engine is None:
+        logger.info("Initializing NLP engine")
+        _nlp_engine = create_nlp_engine()
+    return _nlp_engine
+
+
+def _ensure_registry():
+    global _registry
+    if _registry is None:
+        logger.info("Initializing recognizer registry")
+        _registry = RecognizerRegistry()
+        _registry.load_predefined_recognizers(nlp_engine=_ensure_nlp_engine())
+        for recognizer in build_ru_critical_recognizers() + build_ru_bank_recognizers():
+            _registry.add_recognizer(recognizer)
+    return _registry
+
+
+def get_analyzer() -> AnalyzerEngine:
+    global _analyzer
+    if _analyzer is None:
+        logger.info("Initializing analyzer engine")
+        _analyzer = AnalyzerEngine(
+            nlp_engine=_ensure_nlp_engine(),
+            registry=_ensure_registry(),
+            supported_languages=["ru", "en"],
+        )
+    return _analyzer
+
+
+def get_anonymizer() -> AnonymizerEngine:
+    global _anonymizer
+    if _anonymizer is None:
+        logger.info("Initializing anonymizer engine")
+        _anonymizer = AnonymizerEngine()
+    return _anonymizer
+
+
+def runtime_status() -> dict:
+    """Return current initialization/fallback status for service dependencies."""
+
+    return {
+        "analyzer_initialized": _analyzer is not None,
+        "anonymizer_initialized": _anonymizer is not None,
+        "nlp": nlp_status(),
+    }
 
 def post_validate(text: str, results: List[RecognizerResult]) -> List[RecognizerResult]:
     """Apply checksum/context validation and dedupe results."""

@@ -1,7 +1,7 @@
 """NLP engine helpers."""
 
 import logging
-from typing import Set
+from typing import Optional, Set
 
 import spacy
 from presidio_analyzer.nlp_engine import NlpEngine, NlpEngineProvider
@@ -10,6 +10,10 @@ from presidio_analyzer.nlp_engine.spacy_nlp_engine import SpacyNlpEngine
 from app.config import NLP_CONFIG
 
 logger = logging.getLogger(__name__)
+
+FALLBACK_USED = False
+FALLBACK_REASON: Optional[str] = None
+INITIALIZED = False
 
 
 def _blank_spacy_engine(languages: Set[str]) -> NlpEngine:
@@ -27,10 +31,28 @@ def create_nlp_engine() -> NlpEngine:
 
     provider = NlpEngineProvider(nlp_configuration=NLP_CONFIG)
     try:
-        return provider.create_engine()
+        engine = provider.create_engine()
+        global INITIALIZED
+        INITIALIZED = True
+        return engine
     except Exception as exc:  # pragma: no cover - fallback path depends on env
         logger.warning("Falling back to blank spaCy models: %s", exc)
+        global FALLBACK_USED, FALLBACK_REASON, INITIALIZED
+        FALLBACK_USED = True
+        FALLBACK_REASON = str(exc)
         languages = {model["lang_code"] for model in NLP_CONFIG.get("models", [])}
         if not languages:
             languages = {"ru", "en"}
-        return _blank_spacy_engine(languages)
+        engine = _blank_spacy_engine(languages)
+        INITIALIZED = True
+        return engine
+
+
+def nlp_status() -> dict:
+    """Return runtime status for the NLP engine/fallbacks."""
+
+    return {
+        "initialized": INITIALIZED,
+        "fallback_used": FALLBACK_USED,
+        "fallback_reason": FALLBACK_REASON,
+    }
