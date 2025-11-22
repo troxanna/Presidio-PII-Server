@@ -108,6 +108,12 @@ def post_validate(text: str, results: List[RecognizerResult]) -> List[Recognizer
             digits = ''.join(ch for ch in span if ch.isdigit())
             if len(digits) != 10 or set(digits) == {"0"}:
                 continue
+
+            # Drop spurious passport matches that only fit the digit pattern but
+            # lack nearby passport context (e.g. misfired on INN numbers).
+            window = text[max(0, r.start - 24): min(len(text), r.end + 16)].lower()
+            if "паспорт" not in window and "passport" not in window:
+                continue
         if et in {E.RU_RS, E.RU_KS}:
             if not biks_in_text:
                 continue

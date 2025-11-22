@@ -120,3 +120,27 @@ def test_person_recognizer_rejects_nouns(client):
     assert resp.status_code == 200
     items = resp.json()["items"]
     assert all(item["entity_type"] != "PERSON" for item in items)
+
+
+def test_full_ru_payload_has_all_key_entities(client):
+    text = (
+        "Иванов Иван Иванович из Москвы (ООО \"Контур\"), паспорт 4012 345678, "
+        "СНИЛС 123-456-789 01, ИНН 7736050003, ОГРН 1027700132195, "
+        "ОГРНИП 304500116000157, БИК 044525225, р/с 40702810900000001234, "
+        "к/с 30101810400000000225, телефон +7 (912) 000-00-00 и +90 531 123 4567, "
+        "email ivan.ivanov@example.com, карта 4111 1111 1111 1111."
+    )
+
+    resp = client.post("/analyze", json={"text": text, "language": "ru"})
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    types = {i["entity_type"] for i in items}
+
+    assert {"PERSON", "RU_PASSPORT", "RU_INN", "RU_OGRN", "RU_OGRNIP"}.issubset(types)
+    assert {"PHONE_NUMBER_RU", "PHONE_NUMBER", "EMAIL_ADDRESS"}.issubset(types)
+
+    # We should only keep the real passport (the INN should not be misclassified as one).
+    passport_spans = [
+        (i["start"], i["end"]) for i in items if i["entity_type"] == "RU_PASSPORT"
+    ]
+    assert len(passport_spans) == 1

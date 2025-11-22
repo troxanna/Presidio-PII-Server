@@ -206,29 +206,6 @@ def build_generic_recognizers() -> List[PatternRecognizer]:
     return recs
 
 
-def build_generic_recognizers() -> List[PatternRecognizer]:
-    """Recognizers that should work across supported languages."""
-
-    recs: List[PatternRecognizer] = []
-
-    recs.append(
-        PatternRecognizer(
-            supported_entity=E.PHONE,
-            patterns=[
-                Pattern(
-                    "phone_international",
-                    r"(?<!\d)(?=(?:.*[\s\u00A0-]){2,})(?:\+?\d{1,3}[\s\u00A0-]?)?(?:\(?\d{2,4}\)?[\s\u00A0-]?){2,4}\d{2,4}(?!\d)",
-                    0.5,
-                )
-            ],
-            context=["phone", "tel", "mobile", "cell", "тел", "телефон", "моб"],
-            supported_language=["en", "ru"],
-        )
-    )
-
-    return recs
-
-
 def build_ru_bank_recognizers() -> List[PatternRecognizer]:
     recs: List[PatternRecognizer] = []
 
