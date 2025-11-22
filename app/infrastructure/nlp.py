@@ -29,15 +29,15 @@ def _blank_spacy_engine(languages: Set[str]) -> NlpEngine:
 def create_nlp_engine() -> NlpEngine:
     """Create and return the spaCy-based NLP engine for Presidio."""
 
+    global INITIALIZED, FALLBACK_USED, FALLBACK_REASON
+
     provider = NlpEngineProvider(nlp_configuration=NLP_CONFIG)
     try:
         engine = provider.create_engine()
-        global INITIALIZED
         INITIALIZED = True
         return engine
     except Exception as exc:  # pragma: no cover - fallback path depends on env
         logger.warning("Falling back to blank spaCy models: %s", exc)
-        global FALLBACK_USED, FALLBACK_REASON, INITIALIZED
         FALLBACK_USED = True
         FALLBACK_REASON = str(exc)
         languages = {model["lang_code"] for model in NLP_CONFIG.get("models", [])}
