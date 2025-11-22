@@ -131,7 +131,18 @@ def build_ru_critical_recognizers() -> List[PatternRecognizer]:
     # Phone (RU)
     recs.append(PatternRecognizer(
         supported_entity=E.PHONE_RU,
-        patterns=[Pattern("phone_ru", r"\b(?:\+7|8)\s?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b", 0.2)],
+        patterns=[
+            Pattern(
+                "phone_ru",
+                r"(?<!\d)(?:\+7|8)\s*\(?\d{3}\)?[\s\u00A0-]*\d{3}[\s\u00A0-]*\d{2}[\s\u00A0-]*\d{2}(?!\d)",
+                0.7,
+            ),
+            Pattern(
+                "phone_ru_compact",
+                r"(?<!\d)(?:\+7|8)[\s\u00A0-]*\d{10}(?!\d)",
+                0.55,
+            )
+        ],
         context=["тел", "моб", "телефон"],
         supported_language="ru",
     ))
@@ -151,6 +162,29 @@ def build_ru_critical_recognizers() -> List[PatternRecognizer]:
         context=["card", "карта", "visa", "mastercard"],
         supported_language=["ru", "en"],
     ))
+
+    return recs
+
+
+def build_generic_recognizers() -> List[PatternRecognizer]:
+    """Recognizers that should work across supported languages."""
+
+    recs: List[PatternRecognizer] = []
+
+    recs.append(
+        PatternRecognizer(
+            supported_entity=E.PHONE,
+            patterns=[
+                Pattern(
+                    "phone_international",
+                    r"(?<!\d)(?:\+?\d{1,3}[\s-]?)?(?:\(?\d{2,4}\)?[\s-]?){2,4}\d{2,4}(?!\d)",
+                    0.5,
+                )
+            ],
+            context=["phone", "tel", "mobile", "cell", "тел", "телефон", "моб"],
+            supported_language=["en", "ru"],
+        )
+    )
 
     return recs
 
