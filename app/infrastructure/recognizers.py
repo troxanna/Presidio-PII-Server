@@ -129,28 +129,79 @@ def build_ru_critical_recognizers() -> List[PatternRecognizer]:
     ))
 
     # Phone (RU)
-    recs.append(PatternRecognizer(
-        supported_entity=E.PHONE_RU,
-        patterns=[Pattern("phone_ru", r"\b(?:\+7|8)\s?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b", 0.2)],
-        context=["тел", "моб", "телефон"],
-        supported_language="ru",
-    ))
+    phone_ru_patterns = [
+        Pattern(
+            "phone_ru",
+            r"(?<!\d)(?:\+7|8)\s*\(?\d{3}\)?[\s\u00A0-]*\d{3}[\s\u00A0-]*\d{2}[\s\u00A0-]*\d{2}(?!\d)",
+            0.7,
+        ),
+        Pattern(
+            "phone_ru_compact",
+            r"(?<!\d)(?:\+7|8)[\s\u00A0-]*\d{10}(?!\d)",
+            0.55,
+        ),
+    ]
+    for lang in ("ru", "en"):
+        recs.append(
+            PatternRecognizer(
+                supported_entity=E.PHONE_RU,
+                patterns=phone_ru_patterns,
+                context=["тел", "моб", "телефон", "phone", "tel"],
+                supported_language=lang,
+            )
+        )
 
     # Email
-    recs.append(PatternRecognizer(
-        supported_entity=E.EMAIL,
-        patterns=[Pattern("email_simple", r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", 0.2)],
-        context=["email", "e-mail", "почта"],
-        supported_language=["ru", "en"],
-    ))
+    email_pattern = Pattern(
+        "email_simple",
+        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
+        0.2,
+    )
+    for lang in ("ru", "en"):
+        recs.append(
+            PatternRecognizer(
+                supported_entity=E.EMAIL,
+                patterns=[email_pattern],
+                context=["email", "e-mail", "почта"],
+                supported_language=lang,
+            )
+        )
 
     # Card PAN (13-19 digits) — needs Luhn in post-validation
-    recs.append(PatternRecognizer(
-        supported_entity=E.CARD,
-        patterns=[Pattern("card_pan", r"\b(?:\d[ -]?){13,19}\b", 0.1)],
-        context=["card", "карта", "visa", "mastercard"],
-        supported_language=["ru", "en"],
-    ))
+    card_pattern = Pattern("card_pan", r"\b(?:\d[ -]?){13,19}\b", 0.1)
+    for lang in ("ru", "en"):
+        recs.append(
+            PatternRecognizer(
+                supported_entity=E.CARD,
+                patterns=[card_pattern],
+                context=["card", "карта", "visa", "mastercard"],
+                supported_language=lang,
+            )
+        )
+
+    return recs
+
+
+def build_generic_recognizers() -> List[PatternRecognizer]:
+    """Recognizers that should work across supported languages."""
+
+    recs: List[PatternRecognizer] = []
+
+    phone_generic = Pattern(
+        "phone_international",
+        r"(?<!\d)(?=(?:.*[\s\u00A0-]){2,})(?:\+\d{1,3}|00\d{1,3})[\s\u00A0-]?(?:\(?\d{2,4}\)?[\s\u00A0-]?){2,4}\d{2,4}(?!\d)",
+        0.5,
+    )
+
+    for lang in ("en", "ru"):
+        recs.append(
+            PatternRecognizer(
+                supported_entity=E.PHONE,
+                patterns=[phone_generic],
+                context=["phone", "tel", "mobile", "cell", "тел", "телефон", "моб"],
+                supported_language=lang,
+            )
+        )
 
     return recs
 
