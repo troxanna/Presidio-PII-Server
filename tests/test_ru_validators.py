@@ -28,6 +28,15 @@ def test_ru_phone_detected_inside_larger_text(client):
     items = resp.json()["items"]
     assert any(item["entity_type"] == "PHONE_NUMBER_RU" for item in items)
 
+
+def test_ru_phone_with_non_breaking_spaces(client):
+    text = "телефон +7\u00A0(912)\u00A0000\u00A0\u00A000\u00A0\u00A000"
+
+    resp = client.post("/analyze", json={"text": text, "language": "ru"})
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert any(item["entity_type"] == "PHONE_NUMBER_RU" for item in items)
+
 def test_analyze_and_anonymize(client):
     # Analyze
     resp = client.post("/analyze", json={"text": RU_SAMPLE, "language": "ru"})

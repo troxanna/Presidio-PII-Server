@@ -134,8 +134,13 @@ def build_ru_critical_recognizers() -> List[PatternRecognizer]:
         patterns=[
             Pattern(
                 "phone_ru",
-                r"\b(?:\+7|8)\s?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b",
+                r"(?<!\d)(?:\+7|8)\s*\(?\d{3}\)?[\s\u00A0-]*\d{3}[\s\u00A0-]*\d{2}[\s\u00A0-]*\d{2}(?!\d)",
                 0.7,
+            ),
+            Pattern(
+                "phone_ru_compact",
+                r"(?<!\d)(?:\+7|8)[\s\u00A0-]*\d{10}(?!\d)",
+                0.55,
             )
         ],
         context=["тел", "моб", "телефон"],
