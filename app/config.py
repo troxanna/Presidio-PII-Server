@@ -25,6 +25,12 @@ DEFAULT_POLICY: Dict[str, Dict[str, Any]] = {
         "from_end": False,
         "masking_char": "*",
     },
+    "PHONE_NUMBER": {
+        "type": "mask",
+        "chars_to_mask": 100,
+        "from_end": False,
+        "masking_char": "*",
+    },
     "PHONE_NUMBER_RU": {
         "type": "mask",
         "chars_to_mask": 100,

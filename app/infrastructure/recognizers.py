@@ -131,7 +131,13 @@ def build_ru_critical_recognizers() -> List[PatternRecognizer]:
     # Phone (RU)
     recs.append(PatternRecognizer(
         supported_entity=E.PHONE_RU,
-        patterns=[Pattern("phone_ru", r"\b(?:\+7|8)\s?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b", 0.2)],
+        patterns=[
+            Pattern(
+                "phone_ru",
+                r"\b(?:\+7|8)\s?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b",
+                0.7,
+            )
+        ],
         context=["тел", "моб", "телефон"],
         supported_language="ru",
     ))
