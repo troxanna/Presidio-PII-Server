@@ -144,3 +144,35 @@ def test_full_ru_payload_has_all_key_entities(client):
         (i["start"], i["end"]) for i in items if i["entity_type"] == "RU_PASSPORT"
     ]
     assert len(passport_spans) == 1
+
+
+def test_passport_is_not_misclassified_as_phone_in_english_text(client):
+    text = (
+        "John Doe from London (Contoso Ltd), passport number 4012 345678, "
+        "email john.doe@example.com, phones +7 (912) 000-00-00 and +44 20 7946 "
+        "0958, credit card 4111 1111 1111 1111."
+    )
+
+    resp = client.post("/analyze", json={"text": text, "language": "en"})
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+
+    # Passport should be detected as a passport, not as a phone number or license.
+    assert any(
+        i["entity_type"] == "RU_PASSPORT" and i["text"] == "4012 345678"
+        for i in items
+    )
+    assert not any(
+        i["entity_type"] in {"PHONE_NUMBER", "PHONE_NUMBER_RU"}
+        and i["text"] == "4012 345678"
+        for i in items
+    )
+    assert not any(i["entity_type"] == "US_DRIVER_LICENSE" for i in items)
+
+    # Email should not be split into URL fragments.
+    assert any(i["entity_type"] == "EMAIL_ADDRESS" for i in items)
+    assert not any(i["entity_type"] == "URL" for i in items)
+
+    # Real phone numbers should still be returned.
+    assert any(i["entity_type"] in {"PHONE_NUMBER_RU", "PHONE_NUMBER"} and "+7" in i["text"] for i in items)
+    assert any(i["entity_type"] == "PHONE_NUMBER" and "+44" in i["text"] for i in items)

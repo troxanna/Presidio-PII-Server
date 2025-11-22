@@ -69,12 +69,14 @@ def build_ru_critical_recognizers() -> List[PatternRecognizer]:
     recs: List[PatternRecognizer] = []
 
     # Passport (series 4 digits + number 6 digits)
-    recs.append(PatternRecognizer(
-        supported_entity=E.RU_PASSPORT,
-        patterns=[Pattern("russian_passport", r"\b\d{2}\s?\d{2}\s?\d{6}\b", 0.3)],
-        context=["паспорт", "серия", "номер"],
-        supported_language="ru",
-    ))
+    passport_context = ["паспорт", "passport", "серия", "номер", "number"]
+    for lang in ("ru", "en"):
+        recs.append(PatternRecognizer(
+            supported_entity=E.RU_PASSPORT,
+            patterns=[Pattern("russian_passport", r"\b\d{2}\s?\d{2}\s?\d{6}\b", 0.3)],
+            context=passport_context,
+            supported_language=lang,
+        ))
 
     # Russian full name (ФИО)
     recs.append(PatternRecognizer(

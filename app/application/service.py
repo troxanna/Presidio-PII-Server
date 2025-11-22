@@ -1,5 +1,6 @@
 # Service placeholder
 import logging
+import re
 from typing import List
 
 from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, RecognizerResult
@@ -86,6 +87,9 @@ def post_validate(text: str, results: List[RecognizerResult]) -> List[Recognizer
     """Apply checksum/context validation and dedupe results."""
     validated: List[RecognizerResult] = []
     biks_in_text = [b for b in find_all_biks(text) if bik_ok(b)]
+    email_spans = [
+        (r.start, r.end) for r in results if r.entity_type == E.EMAIL
+    ]
 
     for r in results:
         et = r.entity_type
@@ -103,6 +107,26 @@ def post_validate(text: str, results: List[RecognizerResult]) -> List[Recognizer
         if et in {E.RU_OGRN, E.RU_OGRNIP} and not ogrn_checksum_ok(span):
             continue
         if et == E.CARD and not luhn_ok(span):
+            continue
+        if et == "URL":
+            overlaps_email = any(
+                not (r.end <= s or r.start >= e) for s, e in email_spans
+            )
+            if "@" in span or overlaps_email:
+                continue
+        if et in {E.PHONE, E.PHONE_RU}:
+            digits = "".join(ch for ch in span if ch.isdigit())
+            window = text[max(0, r.start - 16) : min(len(text), r.end + 16)].lower()
+            has_phone_keyword = bool(
+                re.search(r"\b(phone|tel|mobile|cell|тел|телефон|моб)\b", window)
+            )
+
+            has_prefix = span.strip().startswith(("+", "00"))
+            has_ru_domestic_prefix = digits.startswith("8") and len(digits) == 11
+
+            if not (has_prefix or has_ru_domestic_prefix or has_phone_keyword):
+                continue
+        if et == "US_DRIVER_LICENSE":
             continue
         if et == E.RU_PASSPORT:
             digits = ''.join(ch for ch in span if ch.isdigit())
