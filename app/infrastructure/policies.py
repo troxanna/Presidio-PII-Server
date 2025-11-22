@@ -1,6 +1,8 @@
 # Policies placeholder
 from typing import Any, Dict
 
+import copy
+
 from presidio_anonymizer.entities import OperatorConfig
 
 from app.config import DEFAULT_POLICY
@@ -8,7 +10,7 @@ from app.config import DEFAULT_POLICY
 
 def get_default_policy() -> Dict[str, Dict[str, Any]]:
     """Return a copy of the default anonymization policy."""
-    return {**DEFAULT_POLICY}
+    return copy.deepcopy(DEFAULT_POLICY)
 
 
 def to_operator_config(policy: Dict[str, Dict[str, Any]]) -> Dict[str, OperatorConfig]:
