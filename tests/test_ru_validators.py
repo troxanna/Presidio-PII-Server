@@ -16,6 +16,18 @@ def test_ru_phone_number_is_detected(client):
     items = resp.json()["items"]
     assert any(item["entity_type"] == "PHONE_NUMBER_RU" for item in items)
 
+
+def test_ru_phone_detected_inside_larger_text(client):
+    text = (
+        "Иван Иванов, паспорт 4012 345678 выдан 12.03.2015, телефон +7 (912) "
+        "000-00-00"
+    )
+
+    resp = client.post("/analyze", json={"text": text, "language": "ru"})
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert any(item["entity_type"] == "PHONE_NUMBER_RU" for item in items)
+
 def test_analyze_and_anonymize(client):
     # Analyze
     resp = client.post("/analyze", json={"text": RU_SAMPLE, "language": "ru"})
