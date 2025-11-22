@@ -1,12 +1,17 @@
 # Service placeholder
 import logging
+import re
 from typing import List
 
 from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, RecognizerResult
 from presidio_anonymizer import AnonymizerEngine
 
 from app.infrastructure.nlp import create_nlp_engine, nlp_status
-from app.infrastructure.recognizers import build_ru_critical_recognizers, build_ru_bank_recognizers
+from app.infrastructure.recognizers import (
+    build_generic_recognizers,
+    build_ru_bank_recognizers,
+    build_ru_critical_recognizers,
+)
 from app.domain.validators import (
     luhn_ok,
     snils_checksum_ok,
@@ -40,7 +45,11 @@ def _ensure_registry():
         logger.info("Initializing recognizer registry")
         _registry = RecognizerRegistry()
         _registry.load_predefined_recognizers(nlp_engine=_ensure_nlp_engine())
-        for recognizer in build_ru_critical_recognizers() + build_ru_bank_recognizers():
+        for recognizer in (
+            build_generic_recognizers()
+            + build_ru_critical_recognizers()
+            + build_ru_bank_recognizers()
+        ):
             _registry.add_recognizer(recognizer)
     return _registry
 
@@ -78,6 +87,9 @@ def post_validate(text: str, results: List[RecognizerResult]) -> List[Recognizer
     """Apply checksum/context validation and dedupe results."""
     validated: List[RecognizerResult] = []
     biks_in_text = [b for b in find_all_biks(text) if bik_ok(b)]
+    email_spans = [
+        (r.start, r.end) for r in results if r.entity_type == E.EMAIL
+    ]
 
     for r in results:
         et = r.entity_type
@@ -96,9 +108,35 @@ def post_validate(text: str, results: List[RecognizerResult]) -> List[Recognizer
             continue
         if et == E.CARD and not luhn_ok(span):
             continue
+        if et == "URL":
+            overlaps_email = any(
+                not (r.end <= s or r.start >= e) for s, e in email_spans
+            )
+            if "@" in span or overlaps_email:
+                continue
+        if et in {E.PHONE, E.PHONE_RU}:
+            digits = "".join(ch for ch in span if ch.isdigit())
+            window = text[max(0, r.start - 16) : min(len(text), r.end + 16)].lower()
+            has_phone_keyword = bool(
+                re.search(r"\b(phone|tel|mobile|cell|тел|телефон|моб)\b", window)
+            )
+
+            has_prefix = span.strip().startswith(("+", "00"))
+            has_ru_domestic_prefix = digits.startswith("8") and len(digits) == 11
+
+            if not (has_prefix or has_ru_domestic_prefix or has_phone_keyword):
+                continue
+        if et == "US_DRIVER_LICENSE":
+            continue
         if et == E.RU_PASSPORT:
             digits = ''.join(ch for ch in span if ch.isdigit())
             if len(digits) != 10 or set(digits) == {"0"}:
+                continue
+
+            # Drop spurious passport matches that only fit the digit pattern but
+            # lack nearby passport context (e.g. misfired on INN numbers).
+            window = text[max(0, r.start - 24): min(len(text), r.end + 16)].lower()
+            if "паспорт" not in window and "passport" not in window:
                 continue
         if et in {E.RU_RS, E.RU_KS}:
             if not biks_in_text:
